@@ -5,11 +5,410 @@
     <link rel="stylesheet" type="text/css" href="https://cdn.mxpnl.com/libs/mixpanel-platform/css/reset.css">
     <link rel="stylesheet" type="text/css" href="https://cdn.mxpnl.com/libs/mixpanel-platform/build/mixpanel-platform.v0.latest.min.css">
     <script src="https://cdn.mxpnl.com/libs/mixpanel-platform/build/mixpanel-platform.v0.latest.min.js"></script>
+    <style>
+      #monthleads {
+        width: 600px;
+        float: right;
+      }
+      #weekleads {
+        width: 600px;
+        float: left;
+        margin-left: 10px;
+      }
+     /* #monthsums {
+        width: 400px;
+        height: 100px;
+        float: left;
+        background-color: #eeeeee;
+      }*/
+      #bigwrapper {
+        width: 100%;
+        height: 1200px;
+      }
+      #leftwrapper {
+        /*width: 400px;*/
+        float: left;
+        width: 45%;
+      }
+      #rightwrapper {
+        /*width: 400px;*/
+        float: left;
+        width: 45%;
+        padding-left: 20px;
+      }
+      #monthviews {
+        float: right;
+        width: 600px;
+        margin-top: 20px;
+      }
+      #weekviews {
+        float: left;
+        width: 600px;
+        margin-top: 20px;
+      }
+      #monthuniqueviews {
+        float: right;
+        width: 600px;
+        margin-top: 20px;
+      }
+      #weekuniqueviews {
+        float: left;
+        width: 600px;
+        margin-top: 20px;
+      }
+      #mzipsearches {
+        float: right;
+        width: 600px;
+        margin-top: 20px;
+      }
+      #wzipsearches {
+        float: left;
+        width: 600px;
+        margin-top: 20px;
+      }
+    </style>
   </head>
   <body class="mixpanel-platform-body">
-    <h1>Hello, World!</h1>
+    <div class="mixpanel-platform-section">
+      <div style="clear: both; float:center; width:400px"></div>
+      <div id="graph"></div>
+      Sears Marketplace Dashboard
+    </div>
+    <div id="bigwrapper">
+      <div id = "leftwrapper">
+        <div id="monthleads"></div>
+        <!-- <div id="monthsums"></div> -->
+        <div id="monthviews"></div>
+        <div id="monthuniqueviews"></div>
+        <div id="mzipsearches"></div>
+      </div>
+
+      <div id ="rightwrapper">
+        <div id="weekleads"></div>
+        <div id="weekviews"></div>
+        <div id="weekuniqueviews"></div>
+        <div id="wzipsearches"></div>
+      </div>
+      <div id="table"></div>
+
+    </div>
     <script>
-      // Run queries and display results here
+      //MP.api.setCredentials('c00467420fdeb3bf2a35baf9479e2df9','9d930a52031e8e53acc4654498315bc6')
+      MP.api.MAX_SIMULTANEOUS_QUERIES = 30
+      $(document).ready(function() {
+        var params = {
+          type: 'general',
+          unit: 'month',
+          interval: 3
+        };
+        events = ['MarketPlace electrical Schedule 2 Lead Submit', 'MarketPlace plumbing Schedule 2 Lead Submit']
+
+          MP.api.events('MarketPlace electrical Schedule 2 Lead Submit','MarketPlace plumbing Schedule 2 Lead Submit', params).done(function(results) {
+            objs = results.values()
+
+            //Rename obj keys
+            objs['Electrical Lead'] = objs['MarketPlace electrical Schedule 2 Lead Submit'];
+            objs['Plumbing Lead'] = objs['MarketPlace plumbing Schedule 2 Lead Submit'];
+            delete objs['MarketPlace electrical Schedule 2 Lead Submit'];
+            delete objs['MarketPlace plumbing Schedule 2 Lead Submit'];
+            
+            //Create Monthly Sums
+            months = _.keys(objs[_.keys(objs)[0]])
+            keys = _.keys(objs)
+            sums = {}
+            var tableData = {}
+            _.each(months, function(month) {
+                var total = 0
+                tableData[month] = {}
+                _.each(keys, function(key) {
+                  _.each(objs, function(obj) {
+                      total += obj[month]
+                      month[obj] = obj[month]
+                  });
+                  //console.log(tableData[month])
+                  //tableData[month['total']] = total
+                  sums[month] = total
+                });   
+            });
+            console.log(tableData);
+            $('#monthleads').MPTable({
+                data: objs,
+                showPercentages: true,
+                firstColHeader: 'Last 2 Months'
+            });
+            // $('#monthsums').MPTable({ // create table; try scrolling horizontally over demo below
+            //   data: sums
+            //   //firstColHeader: 'Total'
+            // });
+          });
+
+          var params = {
+            type: 'general',
+            unit: 'week',
+            interval: 2
+          };
+
+          MP.api.events('MarketPlace electrical Schedule 2 Lead Submit','MarketPlace plumbing Schedule 2 Lead Submit', params).done(function(results) {
+
+            objs = results.values()
+            //Rename obj keys
+            objs['Electrical Lead'] = objs['MarketPlace electrical Schedule 2 Lead Submit'];
+            objs['Plumbing Lead'] = objs['MarketPlace plumbing Schedule 2 Lead Submit'];
+            delete objs['MarketPlace electrical Schedule 2 Lead Submit'];
+            delete objs['MarketPlace plumbing Schedule 2 Lead Submit'];
+
+            $('#weekleads').MPTable({
+              data: objs,
+              showPercentages: true,
+              firstColHeader: 'Last 2 weeks'
+            });
+          });
+          
+          //Start Total Montly Page Views
+          var params = {
+            type: 'general',
+            unit: 'month',
+            //interval: 2,
+            where: '(string(properties["Page Name"]) == "Plumbing")',
+            from: moment().subtract(2, 'month'),
+            to: moment()
+          }
+
+          MP.api.segment('Page Views', params).done(function(results) {
+
+            obj1 = results.values()
+            //Rename obj keys
+            obj1['Plumbing Views (Total)'] = obj1['Page Views'];
+            delete obj1['Page Views'];
+
+            var params = {
+            type: 'general',
+            unit: 'month',
+            //interval: 2,
+            where: '(string(properties["Page Name"]) == "Electrical")',
+            from: moment().subtract(2, 'month'),
+            to: moment()
+            }
+
+            MP.api.segment('Page Views', params).done(function(results) {
+              obj2 = results.values()
+              obj2['Electrical Views'] = obj2['Page Views'];
+              delete obj2['Page Views'];
+              obj1['Electrical Views (Total)'] = obj2['Electrical Views']
+   
+              $('#monthviews').MPTable({
+                data: obj1,
+                showPercentages: true,
+                firstColHeader: 'Last 2 Months'
+              });
+            });
+          });
+          //End Total Monthly Page Views
+
+          //Start Total weekly Page Views
+          var params = {
+            type: 'general',
+            unit: 'week',
+            //interval: 2,
+            where: '(string(properties["Page Name"]) == "Plumbing")',
+            from: moment().subtract(2, 'week'),
+            to: moment()
+          }
+          
+          MP.api.segment('Page Views', params).done(function(results) {
+
+            weekpv1 = results.values()
+            //Rename obj keys
+            weekpv1['Plumbing Views (Total)'] = weekpv1['Page Views'];
+            delete weekpv1['Page Views'];
+
+            var params = {
+            type: 'general',
+            unit: 'week',
+            //interval: 2,
+            where: '(string(properties["Page Name"]) == "Electrical")',
+            from: moment().subtract(2, 'week'),
+            to: moment()
+            }
+
+            MP.api.segment('Page Views', params).done(function(results) {
+              weekpv2 = results.values()
+              weekpv2['Electrical Views (Total)'] = weekpv2['Page Views'];
+              delete weekpv2['Page Views'];
+              weekpv1['Electrical Views (Total)'] = weekpv2['Electrical Views (Total)']
+
+              $('#weekviews').MPTable({
+                data: weekpv1,
+                showPercentages: true,
+                firstColHeader: 'Last 2 Weeks'
+              });
+            });
+          });
+          //End Total Weekly Page Views
+
+          var params = {
+            type: 'unique',
+            unit: 'month',
+            //interval: 2,
+            where: '(string(properties["Page Name"]) == "Plumbing")',
+            from: moment().subtract(2, 'month'),
+            to: moment()
+          }
+
+
+          MP.api.segment('Page Views', params).done(function(results) {
+
+            mupv1 = results.values()
+            //Rename obj keys
+            mupv1['Plumbing Views (Unique)'] = mupv1['Page Views'];
+            delete mupv1['Page Views'];
+
+            var params = {
+            type: 'unique',
+            unit: 'month',
+            //interval: 2,
+            where: '(string(properties["Page Name"]) == "Electrical")',
+            from: moment().subtract(2, 'month'),
+            to: moment()
+            }
+
+            MP.api.segment('Page Views', params).done(function(results) {
+              mupv2 = results.values()
+              mupv2['Electrical Views'] = mupv2['Page Views'];
+              delete mupv2['Page Views'];
+              mupv1['Electrical Views (Unique)'] = mupv2['Electrical Views']
+   
+              $('#monthuniqueviews').MPTable({
+                data: mupv1,
+                showPercentages: true,
+                firstColHeader: 'Last 2 Months'
+              });
+            });
+          });
+          //End Unique Monthly Page Views
+
+          //Start Unique weekly Page Views
+          var params = {
+            type: 'unique',
+            unit: 'week',
+            where: '(string(properties["Page Name"]) == "Plumbing")',
+            from: moment().subtract(2, 'week'),
+            to: moment()
+          }
+
+          MP.api.segment('Page Views', params).done(function(results) {
+
+            weekupv1 = results.values()
+            //Rename obj keys
+            weekupv1['Plumbing Views (Unique)'] = weekupv1['Page Views'];
+            delete weekupv1['Page Views'];
+
+            var params = {
+            type: 'unique',
+            unit: 'week',
+            where: '(string(properties["Page Name"]) == "Electrical")',
+            from: moment().subtract(2, 'week'),
+            to: moment()
+            }
+
+            MP.api.segment('Page Views', params).done(function(results) {
+              weekupv2 = results.values()
+              weekupv2['Electrical Views (Unique)'] = weekupv2['Page Views'];
+              delete weekupv2['Page Views'];
+              weekupv1['Electrical Views (Unique)'] = weekupv2['Electrical Views (Unique)']
+
+              console.log(weekupv1)
+              $('#weekuniqueviews').MPTable({
+                data: weekupv1,
+                showPercentages: true,
+                firstColHeader: 'Last 2 weeks'
+              });
+            });
+          });
+          //End Total Weekly Page Views
+
+          //Start Total Monthly Zip Searches
+          var params = {
+            type: 'general',
+            unit: 'month',
+            //interval: 2,
+            where: 'boolean(properties["Zip Code"]) == true and ("/plumbing" in properties["$current_url"]) and (defined (properties["$current_url"]))',
+            from: moment().subtract(2, 'month'),
+            to: moment()
+          }
+
+          MP.api.segment('Clicks', params).done(function(results) {
+
+            zip1 = results.values()
+            //Rename obj keys
+            zip1['Plumbing Zip Searches'] = zip1['Clicks'];
+            delete zip1['Clicks'];
+
+            var params = {
+            type: 'general',
+            unit: 'month',
+            //interval: 2,
+            where: 'boolean(properties["Zip Code"]) == true and ("/electrical" in properties["$current_url"]) and (defined (properties["$current_url"]))',
+            from: moment().subtract(2, 'month'),
+            to: moment()
+            }
+
+            MP.api.segment('Clicks', params).done(function(results) {
+              zip2 = results.values()
+              zip2['Electrical Zip Searches'] = zip2['Clicks'];
+              delete zip2['Clicks'];
+              zip1['Electrical Zip Searches'] = zip2['Electrical Zip Searches']
+   
+              $('#mzipsearches').MPTable({
+                data: zip1,
+                showPercentages: true,
+                firstColHeader: 'Last 2 Months'
+              });
+            });
+          });
+          //End Total Monthly Zip Searches
+
+          //Start Total Weekly Zip Searches
+          var params = {
+            type: 'general',
+            unit: 'week',
+            //interval: 2,
+            where: 'boolean(properties["Zip Code"]) == true and ("/plumbing" in properties["$current_url"]) and (defined (properties["$current_url"]))',
+            from: moment().subtract(2, 'week'),
+            to: moment()
+          }
+
+          MP.api.segment('Clicks', params).done(function(results) {
+
+            zipw1 = results.values()
+            //Rename obj keys
+            zipw1['Plumbing Zip Searches'] = zipw1['Clicks'];
+            delete zipw1['Clicks'];
+
+            var params = {
+            type: 'general',
+            unit: 'week',
+            //interval: 2,
+            where: 'boolean(properties["Zip Code"]) == true and ("/electrical" in properties["$current_url"]) and (defined (properties["$current_url"]))',
+            from: moment().subtract(2, 'week'),
+            to: moment()
+            }
+
+            MP.api.segment('Clicks', params).done(function(results) {
+              zipw2 = results.values()
+              zipw2['Electrical Zip Searches'] = zipw2['Clicks'];
+              delete zipw2['Clicks'];
+              zipw1['Electrical Zip Searches'] = zipw2['Electrical Zip Searches']
+   
+              $('#wzipsearches').MPTable({
+                data: zipw1,
+                showPercentages: true,
+                firstColHeader: 'Last 2 Weeks'
+              });
+            });
+          });
+          //End Total Monthly Zip Searches
+      }); 
     </script>
   </body>
 </html>
